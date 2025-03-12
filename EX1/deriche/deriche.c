@@ -1,4 +1,4 @@
-/**
+/*
  * This version is stamped on May 10, 2016
  *
  * Contact:
@@ -180,6 +180,7 @@ int main(int argc, char** argv)
 
   /* Stop and print timer. */
   polybench_stop_instruments;
+  printf("Time (s)= ");
   polybench_print_instruments;
 
   /* Prevent dead-code elimination. All live-out data must be printed

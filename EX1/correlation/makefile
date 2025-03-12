@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -O3 -I ../../utilities/ -I . 
+CFLAGS = -O3 -I ../../utilities/ -I . -DPOLYBENCH_TIME
 
 # Source files
 SRCS = correlation.c ../../utilities/polybench.c
