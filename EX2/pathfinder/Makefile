@@ -1,14 +1,10 @@
-include ../../common/openmp.make.config
-SRC = pathfinder.cpp
-EXE = pathfinder
+include ../common.mk
 
-$(EXE):
-	$(CXX) $(SRC) $(CC_FLAGS) -o $(EXE) $(LINKER_FLAGS)
+EXE  = pathfinder
 
-debug:
-	$(CC) $(SRC) -g -Wall -o $(EXE) $(MY_ADDITIONAL_FLAGS)
+.PHONY: all
+all: $(EXE)
 
+.PHONY: clean
 clean:
-	rm -f pathfinder
-
-
+	$(RM) $(EXE) output.txt

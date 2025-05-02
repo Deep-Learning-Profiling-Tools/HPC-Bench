@@ -1,3 +1,4 @@
-#./lavaMD -boxes1d 20
-./lavaMD -boxes1d 10
+#!/usr/bin/env bash
+set -ue
 
+./lavaMD -boxes1d 10

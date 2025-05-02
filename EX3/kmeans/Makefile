@@ -1,12 +1,13 @@
-all: OPENMP/kmeans SERIAL/kmeans
+include ../common.mk
 
-OPENMP/kmeans:
-	cd kmeans_openmp; make
-	
-SERIAL/kmeans:
-	cd kmeans_serial; make
+EXE  = kmeans
+OBJS = cluster.o getopt.o kmeans.o kmeans_clustering.o
 
+.PHONY: all
+all: $(EXE)
+
+$(EXE): $(OBJS)
+
+.PHONY: clean
 clean:
-	cd kmeans_serial; make clean
-	cd kmeans_openmp; make clean
-	
+	$(RM) $(EXE) $(OBJS) output.txt

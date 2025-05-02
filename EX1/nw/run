@@ -1,3 +1,4 @@
-#./needle 2048 10 2 
-./needle 10240 10 2
+#!/usr/bin/env bash
+set -ue
 
+./needle 2048 10 2 

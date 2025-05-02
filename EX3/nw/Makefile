@@ -1,17 +1,10 @@
-include ../../common/openmp.make.config
-# C compiler
-#CC = g++
-ICC = icc
-CC_FLAGS = -g -fopenmp
-OFFLOAD_CC_FLAGS = -offload-option,mic,compiler,"-no-opt-prefetch"
+include ../common.mk
 
-all: needle #needle_offload
+EXE  = needle
 
-needle:
-	$(CXX) $(CXX_FLAGS) needle.cpp -o needle  $(LINKER_FLAGS)
+.PHONY: all
+all: $(EXE)
 
-needle_offload:
-	$(ICC) $(CC_FLAGS) $(OFFLOAD_CC_FLAGS) -DOMP_OFFLOAD needle.cpp -o needle_offload
-
+.PHONY: clean
 clean:
-	rm -f needle needle_offload
+	$(RM) $(EXE)

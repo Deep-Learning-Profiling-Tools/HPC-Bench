@@ -1,12 +1,12 @@
-include ../../common/openmp.make.config
+include ../common.mk
 
-particle_filter: ex_particle_OPENMP_seq.c
-	$(CC) ex_particle_OPENMP_seq.c -o particle_filter $(CC_FLAGS) $(LINKER_FLAGS)
+EXE  = particle_filter
 
+.PHONY: all
+all: $(EXE)
 
-icc_openmp: ex_particle_OPENMP_seq.c
-	icc -fast -openmp ex_particle_OPENMP_seq.c -o particle_filter
+$(EXE): LDLIBS += -lm
 
-
+.PHONY: clean
 clean:
-	rm particle_filter
+	$(RM) $(EXE) output.txt

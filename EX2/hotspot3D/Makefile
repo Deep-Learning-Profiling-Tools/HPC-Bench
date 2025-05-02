@@ -1,9 +1,11 @@
-include ../../common/openmp.make.config
+include ../common.mk
 
-OUTPUT = *.out
+EXE  = 3D
 
-3D: 3D.c
-	$(CC) -o 3D $(CC_FLAGS) 3D.c $(LINKER_FLAGS)
+.PHONY: all
+all: $(EXE)
+all: LDLIBS += -lm
 
+.PHONY: clean
 clean:
-	rm -f 3D $(OUTPUT)
+	$(RM) $(EXE) output.txt

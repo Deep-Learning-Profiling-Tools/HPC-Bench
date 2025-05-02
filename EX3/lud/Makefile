@@ -1,10 +1,16 @@
-all: lud_omp #lud_omp_offload
+include ../common.mk
 
-lud_omp:
-	cd omp; make
+EXE  = lud
+OBJS = lud_omp.o common/common.o
 
-lud_omp_offload:
-	cd omp; make -f Makefile.offload
+CPPFLAGS += -Icommon
 
+.PHONY: all
+all: $(EXE)
+
+$(EXE): $(OBJS)
+$(EXE): LDLIBS += -lm
+
+.PHONY: clean
 clean:
-	cd omp; make clean ; make -f Makefile.offload clean
+	$(RM) $(EXE) $(OBJS)

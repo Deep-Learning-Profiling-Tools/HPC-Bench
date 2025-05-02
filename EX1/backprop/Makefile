@@ -1,23 +1,14 @@
-include ../../common/openmp.make.config
+include ../common.mk
 
-backprop: backprop.o facetrain.o imagenet.o backprop_kernel.o
-	$(LINKER) backprop.o facetrain.o imagenet.o backprop_kernel.o -o backprop -lm $(LINKER_FLAGS)
+EXE  = backprop
+OBJS = facetrain.o imagenet.o backprop_kernel.o
 
-%.o: %.[ch]
-	$(CC) $(CC_FLAGS) $< -c -o $@
+.PHONY: all
+all: $(EXE)
 
-facetrain.o: facetrain.c backprop.h
-	$(CC) $(CC_FLAGS) facetrain.c -c -o facetrain.o -std=gnu89
+$(EXE): $(OBJS)
+$(EXE): LDLIBS += -lm
 
-backprop.o: backprop.c backprop.h
-	$(CC) $(CC_FLAGS) backprop.c -c -o backprop.o -std=gnu89
-
-backprop_kernel.o: backprop_kernel.c backprop.h
-	$(CC) $(CC_FLAGS) backprop_kernel.c -c -o backprop_kernel.o -std=gnu89
-
-imagenet.o: imagenet.c backprop.h
-	$(CC) $(CC_FLAGS) imagenet.c -c -o imagenet.o -std=gnu89
-
-
+.PHONY: clean
 clean:
-	rm -f *.o *~ backprop backprop_cuda.linkinfo
+	$(RM) $(EXE) $(OBJS) output.dat

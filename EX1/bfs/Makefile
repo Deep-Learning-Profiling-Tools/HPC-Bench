@@ -1,12 +1,10 @@
-include ../../common/openmp.make.config
+include ../common.mk
 
-all: bfs
+EXE  = bfs
 
-bfs: bfs.cpp
-	$(CC) $(CC_FLAGS) bfs.cpp -o bfs $(LINKER_FLAGS)
+.PHONY: all
+all: $(EXE)
 
-bfs_offload: bfs.cpp
-	$(ICC) $(CC_FLAGS) -DOMP_OFFLOAD bfs.cpp -o bfs_offload
-
+.PHONY: clean
 clean:
-	rm -f bfs bfs_offload result.txt
+	$(RM) $(EXE) output.txt

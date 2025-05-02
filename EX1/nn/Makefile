@@ -1,17 +1,12 @@
-include ../../common/openmp.make.config
+include ../common.mk
 
-LOCAL_CC = gcc -g -Wall
-#CC = gcc
-CFLAGS = -lm -fopenmp -Wall
+EXES = nn
 
-all : nn
+.PHONY: all
+all: $(EXES)
 
-clean :
-	rm -rf *.o nn
+$(EXES): LDLIBS += -lm
 
-nn : nn_openmp.c
-	$(CC) -o $@ $< $(CC_FLAGS) $(LINKER_FLAGS)
-
-hurricane_gen : hurricane_gen.c
-	$(LOCAL_CC) -o $@ $< -lm $(MY_ADDITIONAL_FLAGS)
-
+.PHONY: clean
+clean:
+	$(RM) $(EXES) output.txt
