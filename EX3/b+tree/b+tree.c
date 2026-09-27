@@ -1,7 +1,3 @@
-// # ifdef __cplusplus
-// extern "C" {
-// # endif
-
 //========================================================================================================================================================================================================200
 //======================================================================================================================================================150
 //====================================================================================================100
@@ -21,7 +17,9 @@
 // CUDA, PGI versions;
 // 2011.12; Lukasz G. Szafaryn; Split different versions for Rodinia.
 // 2011.12; Lukasz G. Szafaryn; code converted to OpenCL;
-
+// 2012.10; Ke Wang; Change it to non-interactive mode. Use command option read
+// command from file. And also add output for easy verification among different
+// platforms and devices.Merged into Rodinia main distribution 2.2.
 //======================================================================================================================================================150
 //	DESCRIPTION
 //======================================================================================================================================================150
@@ -63,8 +61,11 @@
 #include <stdio.h> // (in directory known to compiler)			needed by printf, stderr
 #include <limits.h> // (in directory known to compiler)			needed by INT_MIN, INT_MAX
 #include <sys/time.h> // (in directory known to compiler)			needed by gettimeofday
+#include <time.h>     // needed by clock_gettime
 #include <math.h>     // (in directory known to compiler)			needed by log, pow
 #include <string.h>   // (in directory known to compiler)			needed by memset
+
+#include <cuda_runtime.h>
 
 //======================================================================================================================================================150
 //	COMMON
@@ -87,8 +88,8 @@
 //	KERNEL HEADERS
 //======================================================================================================================================================150
 
-#include "./kernel/kernel_cpu.h"   // (in directory provided here)
-#include "./kernel/kernel_cpu_2.h" // (in directory provided here)
+#include "./kernel/kernel_gpu_cuda_wrapper.h"   // (in directory provided here)
+#include "./kernel/kernel_gpu_cuda_wrapper_2.h" // (in directory provided here)
 
 //======================================================================================================================================================150
 //	HEADER
@@ -99,6 +100,8 @@
 //======================================================================================================================================================150
 //	END
 //======================================================================================================================================================150
+
+#define MAX_GPU_BLOCKS 65535
 
 //========================================================================================================================================================================================================200
 //	VARIABLES
@@ -113,29 +116,28 @@ long malloc_size;
 long size;
 long maxheight;
 
-/* The order determines the maximum and minimum
-* number of entries (keys and pointers) in any
-* node.  Every node has at most order - 1 keys and
-* at least (roughly speaking) half that number.
-* Every leaf has as many pointers to data as keys,
-* and every internal node has one more pointer
-* to a subtree than the number of keys.
-* This global variable is initialized to the
-* default value.
+// Timing variables
+double total_kernel_time = 0.0;
+
+/* 
+* The order determines the maximum and minimum number of entries (keys and
+* pointers) in any node.  Every node has at most order - 1 keys and at least
+* (roughly speaking) half that number. Every leaf has as many pointers to data
+* as keys, and every internal node has one more pointer to a subtree than the
+* number of keys. This global variable is initialized to the default value.
 */
 int order = DEFAULT_ORDER;
 
-/* The queue is used to print the tree in
-* level order, starting from the root
-* printing each entire rank on a separate
-* line, finishing with the leaves.
+/* 
+* The queue is used to print the tree in level order, starting from the root
+* printing each entire rank on a separate line, finishing with the leaves.
 */
 node *queue = NULL;
 
-/* The user can toggle on and off the "verbose"
-* property, which causes the pointer addresses
-* to be printed out in hexadecimal notation
-* next to their corresponding keys.
+/*
+* The user can toggle on and off the "verbose" property, which causes the
+* pointer addresses to be printed out in hexadecimal notation next to their
+* corresponding keys.
 */
 bool verbose_output = false;
 
@@ -1646,6 +1648,25 @@ node *destroy_tree(node *root) {
 //========================================================================================================================================================================================================200
 
 int main(int argc, char **argv) {
+    // ------------------------------------------------------------60
+    // Timing setup
+    // ------------------------------------------------------------60
+    
+    struct timespec main_start, main_end;
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+    
+    // ------------------------------------------------------------60
+    // set GPU
+    // ------------------------------------------------------------60
+
+    int device = 0;
+    cudaSetDevice(device);
+    printf("Selecting device %d\n", device);
+
+    // ------------------------------------------------------------60
+    // read inputs
+    // ------------------------------------------------------------60
+
     // assing default values
     int cur_arg;
     char *input_file = NULL;
@@ -1678,6 +1699,15 @@ int main(int argc, char **argv) {
             // value not provided
             else {
                 printf("ERROR: Missing value to command parameter\n");
+                return -1;
+            }
+        } else if ((strcmp(argv[cur_arg], "-o") == 0) ||
+                   (strcmp(argv[cur_arg], "--output") == 0)) {
+            if (argc >= cur_arg + 1) {
+                output = argv[cur_arg + 1];
+                cur_arg = cur_arg + 1;
+            } else {
+                printf("ERROR: Missing value to -o/--output parameter\n");
                 return -1;
             }
         }
@@ -1734,7 +1764,7 @@ int main(int argc, char **argv) {
 
     pFile = fopen(output, "w+");
     if (pFile == NULL)
-        fputs("Fail to open %s !\n", output);
+        fputs("Fail to open %s !\n", stderr);
     fprintf(pFile, "******starting******\n");
     fclose(pFile);
 
@@ -1922,15 +1952,15 @@ int main(int argc, char **argv) {
             // get # of queries from user
             int count;
             sscanf(commandPointer, "%d", &count);
-            while (*commandPointer != 32 && commandPointer != '\n')
+            while (*commandPointer != 32 && *commandPointer != '\n')
                 commandPointer++;
 
             printf("\n ******command: k count=%d \n", count);
 
-            if (count > 65535) {
-                printf("ERROR: Number of requested querries should be 65,535 "
-                       "at most. (limited by # of CUDA blocks)\n");
-                exit(0);
+            if (count > MAX_GPU_BLOCKS) {
+                printf("INFO: Number of requested queries (%d) exceeds single "
+                       "kernel launch limit (%d). Processing in chunks.\n",
+                       count, MAX_GPU_BLOCKS);
             }
 
             // INPUT: records CPU allocation (setting pointer in mem variable)
@@ -1948,58 +1978,77 @@ int main(int argc, char **argv) {
             printf("knodes_elem=%d, knodes_unit_mem=%d, knodes_mem=%d\n",
                    (int)knodes_elem, (int)sizeof(knode), (int)knodes_mem);
 
-            // INPUT: currKnode CPU allocation
-            long *currKnode;
-            currKnode = (long *)malloc(count * sizeof(long));
-            // INPUT: offset CPU initialization
-            memset(currKnode, 0, count * sizeof(long));
-
-            // INPUT: offset CPU allocation
-            long *offset;
-            offset = (long *)malloc(count * sizeof(long));
-            // INPUT: offset CPU initialization
-            memset(offset, 0, count * sizeof(long));
-
-            // INPUT: keys CPU allocation
-            int *keys;
-            keys = (int *)malloc(count * sizeof(int));
-            // INPUT: keys CPU initialization
-            int i;
-            for (i = 0; i < count; i++) {
-                keys[i] = (rand() / (float)RAND_MAX) * size;
-            }
-
-            // OUTPUT: ans CPU allocation
-            record *ans = (record *)malloc(sizeof(record) * count);
-            // OUTPUT: ans CPU initialization
-            for (i = 0; i < count; i++) {
-                ans[i].value = -1;
-            }
-
-            kernel_cpu(records, knodes, knodes_elem,
-
-                       order, maxheight, count,
-
-                       currKnode, offset, keys, ans);
+            long long total_queries = count;
+            long long processed_queries = 0;
 
             pFile = fopen(output, "aw+");
             if (pFile == NULL) {
-                fputs("Fail to open %s !\n", output);
+                fputs("Fail to open output file for writing results!\n", stderr);
+            } else {
+                fprintf(pFile, "\n ******command: k count=%d \n", count);
             }
 
-            fprintf(pFile, "\n ******command: k count=%d \n", count);
-            for (i = 0; i < count; i++) {
-                fprintf(pFile, "%d    %d\n", i, ans[i].value);
+            while (processed_queries < total_queries) {
+                long long remaining = total_queries - processed_queries;
+                int chunk = (int)(remaining > MAX_GPU_BLOCKS ? MAX_GPU_BLOCKS
+                                                            : remaining);
+
+                long *currKnode = (long *)malloc(chunk * sizeof(long));
+                long *offset = (long *)malloc(chunk * sizeof(long));
+                int *keys = (int *)malloc(chunk * sizeof(int));
+                record *ans = (record *)malloc(sizeof(record) * chunk);
+
+                if (currKnode == NULL || offset == NULL || keys == NULL ||
+                    ans == NULL) {
+                    fprintf(stderr,
+                            "ERROR: Memory allocation failed for chunk size %d\n",
+                            chunk);
+                    exit(EXIT_FAILURE);
+                }
+
+                memset(currKnode, 0, chunk * sizeof(long));
+                memset(offset, 0, chunk * sizeof(long));
+
+                int i;
+                for (i = 0; i < chunk; i++) {
+                    keys[i] = (rand() / (float)RAND_MAX) * size;
+                ans[i].value = -1;
             }
-            fprintf(pFile, " \n");
-            fclose(pFile);
 
+                struct timespec kernel_start, kernel_end;
+                clock_gettime(CLOCK_MONOTONIC, &kernel_start);
+                
+                kernel_gpu_cuda_wrapper(records, records_mem, knodes,
+                                        knodes_elem, knodes_mem,
 
-            // free memory
+                                        order, maxheight, chunk,
+
+                                    currKnode, offset, keys, ans);
+                
+                clock_gettime(CLOCK_MONOTONIC, &kernel_end);
+                double kernel_time_chunk = (kernel_end.tv_sec - kernel_start.tv_sec) + 
+                                          (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+                total_kernel_time += kernel_time_chunk;
+
+                if (pFile != NULL) {
+                    for (i = 0; i < chunk; i++) {
+                        fprintf(pFile, "%lld    %d\n",
+                                processed_queries + i, ans[i].value);
+            }
+                }
+
             free(currKnode);
             free(offset);
             free(keys);
             free(ans);
+
+                processed_queries += chunk;
+            }
+
+            if (pFile != NULL) {
+                fprintf(pFile, " \n");
+                fclose(pFile);
+            }
 
             // break out of case
             break;
@@ -2036,12 +2085,12 @@ int main(int argc, char **argv) {
             // get # of queries from user
             int count;
             sscanf(commandPointer, "%d", &count);
-            while (*commandPointer != 32 && commandPointer != '\n')
+            while (*commandPointer != 32 && *commandPointer != '\n')
                 commandPointer++;
 
             int rSize;
             sscanf(commandPointer, "%d", &rSize);
-            while (*commandPointer != 32 && commandPointer != '\n')
+            while (*commandPointer != 32 && *commandPointer != '\n')
                 commandPointer++;
 
             printf("\n******command: j count=%d, rSize=%d \n", count, rSize);
@@ -2111,16 +2160,24 @@ int main(int argc, char **argv) {
                 reclength[i] = 0;
             }
 
-            kernel_cpu_2(knodes, knodes_elem,
+            struct timespec kernel_start, kernel_end;
+            clock_gettime(CLOCK_MONOTONIC, &kernel_start);
+            
+            kernel_gpu_cuda_wrapper_2(knodes, knodes_elem, knodes_mem,
 
-                         order, maxheight, count,
+                                      order, maxheight, count,
 
-                         currKnode, offset, lastKnode, offset_2, start, end,
-                         recstart, reclength);
+                                      currKnode, offset, lastKnode, offset_2,
+                                      start, end, recstart, reclength);
+            
+            clock_gettime(CLOCK_MONOTONIC, &kernel_end);
+            double kernel_time_chunk = (kernel_end.tv_sec - kernel_start.tv_sec) + 
+                                      (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+            total_kernel_time += kernel_time_chunk;
 
             pFile = fopen(output, "aw+");
             if (pFile == NULL) {
-                fputs("Fail to open %s !\n", output);
+                fputs("Fail to open %s !\n", stderr);
             }
 
             fprintf(pFile, "\n******command: j count=%d, rSize=%d \n", count,
@@ -2171,13 +2228,32 @@ int main(int argc, char **argv) {
     // ------------------------------------------------------------60
 
     free(mem);
+    
+    // ------------------------------------------------------------60
+    // Timing output
+    // ------------------------------------------------------------60
+    
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+    double main_time = (main_end.tv_sec - main_start.tv_sec) + 
+                       (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+    
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
+    if (timing_path && timing_path[0] != '\0') {
+        FILE *tmp = fopen(timing_path, "w");
+        if (tmp)
+            timing_file = tmp;
+    }
+    
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", total_kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+    
+    if (timing_file != stderr)
+        fclose(timing_file);
+    
     return EXIT_SUCCESS;
 }
 
 //========================================================================================================================================================================================================200
 //	END
 //========================================================================================================================================================================================================200
-
-// # ifdef __cplusplus
-// }
-// # endif

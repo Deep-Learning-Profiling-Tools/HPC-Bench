@@ -1,12 +1,10 @@
 include ../common.mk
 
-EXES = nn
+EXE  = nn
 
 .PHONY: all
-all: $(EXES)
-
-$(EXES): LDLIBS += -lm
+all: $(EXE)
 
 .PHONY: clean
 clean:
-	$(RM) $(EXES) output.txt
+	$(RM) $(EXE) output.txt

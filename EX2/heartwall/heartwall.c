@@ -9,9 +9,9 @@
 #include <string.h>
 #include <time.h>
 
-#include <avilib.h>
-#include <avimod.h>
-#include <omp.h>
+
+#include "./AVI/avilib.h"
+#include "./AVI/avimod.h"
 
 #include "define.c"
 #include "kernel.c"
@@ -87,6 +87,13 @@ void write_data(char *filename, int frameNo, int frames_processed,
 //===============================================================================================================================================================================================================
 
 int main(int argc, char *argv[]) {
+    const char *out_file = NULL; // optional output file
+    struct timespec main_start, main_end;
+    double kernel_time = 0.0;
+    double main_time = 0.0;
+    int status = 0;
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
 
     //======================================================================================================================================================
     //	VARIABLES
@@ -105,13 +112,20 @@ int main(int argc, char *argv[]) {
     //======================================================================================================================================================
 
 
-    if (argc != 3) {
-        printf("ERROR: usage: heartwall <inputfile> <num of frames>\n");
-        exit(1);
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+    reset_heartwall_kernel_time();
+
+    if (argc != 3 && argc != 4) {
+        printf("ERROR: usage: heartwall <inputfile> <num of frames> [output_file]\n");
+        status = 1;
+        goto done;
     }
 
     char *video_file_name;
     video_file_name = argv[1];
+    if (argc == 4) {
+        out_file = argv[3];
+    }
 
     avi_t *d_frames =
         (avi_t *)AVI_open_input_file(video_file_name, 1); // added casting
@@ -143,7 +157,8 @@ int main(int argc, char *argv[]) {
         printf("ERROR: %d is an incorrect number of frames specified, select "
                "in the range of 0-%d\n",
                frames_processed, public.frames);
-        return 0;
+        status = 1;
+        goto done;
     }
 
     //======================================================================================================================================================
@@ -758,7 +773,6 @@ int main(int argc, char *argv[]) {
 //====================================================================================================
 
 
-#pragma omp parallel for
         for (i = 0; i < public.allPoints; i++) {
             kernel(public, private[i]);
         }
@@ -793,7 +807,12 @@ int main(int argc, char *argv[]) {
     //==================================================50
     //	DUMP DATA TO FILE
     //==================================================50
-    if (getenv("OUTPUT")) {
+    if (out_file != NULL) {
+        write_data((char *)out_file, public.frames, frames_processed,
+                   public.endoPoints, public.d_tEndoRowLoc,
+                   public.d_tEndoColLoc, public.epiPoints, public.d_tEpiRowLoc,
+                   public.d_tEpiColLoc);
+    } else if (getenv("OUTPUT")) {
         write_data("output.txt", public.frames, frames_processed,
                    public.endoPoints, public.d_tEndoRowLoc,
                    public.d_tEndoColLoc, public.epiPoints, public.d_tEpiRowLoc,
@@ -844,6 +863,26 @@ int main(int argc, char *argv[]) {
         free(private[i].d_tMask);
         free(private[i].d_mask_conv);
     }
+
+done:
+    kernel_time = get_heartwall_kernel_time();
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+    main_time =
+        (double)(main_end.tv_sec - main_start.tv_sec) +
+        (double)(main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+    if (timing_path != NULL) {
+        FILE *f = fopen(timing_path, "a");
+        if (f != NULL) {
+            timing_file = f;
+        }
+    }
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+    if (timing_file != stderr && timing_file != NULL) {
+        fclose(timing_file);
+    }
+    return status;
 }
 
 //========================================================================================================================================================================================================

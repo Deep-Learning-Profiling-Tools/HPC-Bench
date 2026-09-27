@@ -2,4 +2,3 @@
 set -ue
 
 ./heartwall ../../data/heartwall/test.avi 20
-

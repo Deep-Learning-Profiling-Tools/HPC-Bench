@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include "backprop.h"
 #include <math.h>
+//#define OPEN
 
 #define ABS(x) (((x) > 0.0) ? (x) : (-(x)))
 
@@ -227,9 +228,11 @@ int n1, n2;
 
     /*** Set up thresholding unit ***/
     l1[0] = 1.0;
+#ifdef OPEN
     omp_set_num_threads(NUM_THREAD);
 #pragma omp parallel for shared(conn, n1, n2, l1) private(k, j) reduction(     \
     + : sum) schedule(static)
+#endif
     /*** For each unit in second layer ***/
     for (j = 1; j <= n2; j++) {
 
@@ -289,12 +292,14 @@ int ndelta, nly;
     float new_dw;
     int k, j;
     ly[0] = 1.0;
-    // eta = 0.3;
-    // momentum = 0.3;
+// eta = 0.3;
+// momentum = 0.3;
 
+#ifdef OPEN
     omp_set_num_threads(NUM_THREAD);
 #pragma omp parallel for shared(oldw, w, delta) private(                       \
-    j, k, new_dw) firstprivate(ndelta, nly)
+    j, k, new_dw) firstprivate(ndelta, nly, momentum)
+#endif
     for (j = 1; j <= ndelta; j++) {
         for (k = 0; k <= nly; k++) {
             new_dw = ((ETA * delta[j] * ly[k]) + (MOMENTUM * oldw[k][j]));
@@ -413,15 +418,15 @@ BPNN *bpnn_read(filename) char *filename;
         return (NULL);
     }
 
-    printf("Reading '%s'\n", filename);
+    printf("Reading '%s'\n", filename); // fflush(stdout);
 
-    read(fd, (int *)&n1, sizeof(int));
-    read(fd, (int *)&n2, sizeof(int));
-    read(fd, (int *)&n3, sizeof(int));
+    read(fd, (char *)&n1, sizeof(int));
+    read(fd, (char *)&n2, sizeof(int));
+    read(fd, (char *)&n3, sizeof(int));
     new = bpnn_internal_create(n1, n2, n3);
 
     printf("'%s' contains a %dx%dx%d network\n", filename, n1, n2, n3);
-    printf("Reading input weights...");
+    printf("Reading input weights..."); // fflush(stdout);
 
     memcnt = 0;
     mem = (char *)malloc((unsigned)((n1 + 1) * (n2 + 1) * sizeof(float)));
@@ -434,7 +439,7 @@ BPNN *bpnn_read(filename) char *filename;
     }
     free(mem);
 
-    printf("Done\nReading hidden weights...");
+    printf("Done\nReading hidden weights..."); // fflush(stdout);
 
     memcnt = 0;
     mem = (char *)malloc((unsigned)((n2 + 1) * (n3 + 1) * sizeof(float)));
@@ -448,7 +453,7 @@ BPNN *bpnn_read(filename) char *filename;
     free(mem);
     close(fd);
 
-    printf("Done\n");
+    printf("Done\n"); // fflush(stdout);
 
     bpnn_zero_weights(new->input_prev_weights, n1, n2);
     bpnn_zero_weights(new->hidden_prev_weights, n2, n3);

@@ -1,6 +1,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
 
@@ -35,7 +36,7 @@ func_ret_t create_matrix_from_random(float **mp, int size);
 
 func_ret_t create_matrix(float **mp, int size);
 
-func_ret_t lud_verify(float *m, float *lu, int size);
+func_ret_t lud_verify(float *m, float *lu, int size, FILE *output_fp);
 
 void matrix_multiply(float *inputa, float *inputb, float *output, int size);
 

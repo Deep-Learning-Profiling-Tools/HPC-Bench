@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use HPC-Bench, please cite the paper below."
+title: "HPC-Bench: A Comprehensive Benchmark for High Performance Computing Codes"
+type: software
+license: MIT
+repository-code: "https://github.com/Deep-Learning-Profiling-Tools/HPC-Bench"
+authors:
+  - family-names: Cui
+    given-names: Bowen
+  - family-names: Yin
+    given-names: Junyu
+  - family-names: Ramesh
+    given-names: Tejas
+  - family-names: Lim
+    given-names: Leo
+  - family-names: Hernandez
+    given-names: Oscar
+  - family-names: Zhou
+    given-names: Keren
+preferred-citation:
+  type: conference-paper
+  title: "HPC-Bench: A Comprehensive Benchmark for High Performance Computing Codes"
+  collection-title: "Advances in Neural Information Processing Systems (NeurIPS), Evaluations and Datasets Track"
+  year: 2026
+  authors:
+    - family-names: Cui
+      given-names: Bowen
+    - family-names: Yin
+      given-names: Junyu
+    - family-names: Ramesh
+      given-names: Tejas
+    - family-names: Lim
+      given-names: Leo
+    - family-names: Hernandez
+      given-names: Oscar
+    - family-names: Zhou
+      given-names: Keren

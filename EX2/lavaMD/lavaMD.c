@@ -36,6 +36,19 @@
 //========================================================================================================================================================================================================200
 
 int main(int argc, char *argv[]) {
+    const char *g_output_file = NULL; // optional results output file
+
+    struct timespec main_start, main_end;
+    struct timespec kernel_start, kernel_end;
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
+    if (timing_path && timing_path[0] != '\0') {
+        FILE *tmp = fopen(timing_path, "w");
+        if (tmp)
+            timing_file = tmp;
+    }
 
     //======================================================================================================================================================150
     //	CPU/MCPU VARIABLES
@@ -102,6 +115,16 @@ int main(int argc, char *argv[]) {
             // value not provided
             else {
                 printf("ERROR: Missing value to -boxes1d argument\n");
+                return 0;
+            }
+        }
+        // optional: -o <output_file>
+        else if (strcmp(argv[dim_cpu.cur_arg], "-o") == 0) {
+            if (argc >= dim_cpu.cur_arg + 1) {
+                g_output_file = argv[dim_cpu.cur_arg + 1];
+                dim_cpu.cur_arg = dim_cpu.cur_arg + 1;
+            } else {
+                printf("ERROR: Missing value to -o argument\n");
                 return 0;
             }
         }
@@ -266,7 +289,9 @@ int main(int argc, char *argv[]) {
     //	KERNEL
     //======================================================================================================================================================150
 
+    clock_gettime(CLOCK_MONOTONIC, &kernel_start);
     kernel_cpu(par_cpu, dim_cpu, box_cpu, rv_cpu, qv_cpu, fv_cpu);
+    clock_gettime(CLOCK_MONOTONIC, &kernel_end);
 
     time6 = get_time();
 
@@ -275,14 +300,26 @@ int main(int argc, char *argv[]) {
     //======================================================================================================================================================150
 
     // dump results
-    if (getenv("OUTPUT")) {
-        FILE *fptr;
-        fptr = fopen("output.txt", "w");
-        for (i = 0; i < dim_cpu.space_elem; i = i + 1) {
-            fprintf(fptr, "%f, %f, %f, %f\n", fv_cpu[i].v, fv_cpu[i].x,
-                    fv_cpu[i].y, fv_cpu[i].z);
+    if (g_output_file != NULL) {
+        FILE *fptr = fopen(g_output_file, "w");
+        if (fptr) {
+            for (i = 0; i < dim_cpu.space_elem; i = i + 1) {
+                fprintf(fptr, "%f, %f, %f, %f\n", fv_cpu[i].v, fv_cpu[i].x,
+                        fv_cpu[i].y, fv_cpu[i].z);
+            }
+            fclose(fptr);
+        } else {
+            fprintf(stderr, "Failed to open output file: %s\n", g_output_file);
         }
-        fclose(fptr);
+    } else if (getenv("OUTPUT")) {
+        FILE *fptr = fopen("output.txt", "w");
+        if (fptr) {
+            for (i = 0; i < dim_cpu.space_elem; i = i + 1) {
+                fprintf(fptr, "%f, %f, %f, %f\n", fv_cpu[i].v, fv_cpu[i].x,
+                        fv_cpu[i].y, fv_cpu[i].z);
+            }
+            fclose(fptr);
+        }
     }
 
 
@@ -327,6 +364,19 @@ int main(int argc, char *argv[]) {
     //======================================================================================================================================================150
     //	RETURN
     //======================================================================================================================================================150
+
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+
+    double kernel_time = (kernel_end.tv_sec - kernel_start.tv_sec) +
+                         (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+    double main_time = (main_end.tv_sec - main_start.tv_sec) +
+                       (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+
+    if (timing_file != stderr)
+        fclose(timing_file);
 
     return 0.0; // always returns 0.0
 }

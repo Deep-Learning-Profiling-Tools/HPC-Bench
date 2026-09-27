@@ -1,9 +1,25 @@
 #include "find_ellipse.h"
-#include "track_ellipse.h"
+#include "track-ellipse.h"
+#include <string.h>
+#include <time.h>
 
 int omp_num_threads = 1;
 
+static const char *g_output_file = NULL; // optional results output file
+
 int main(int argc, char **argv) {
+
+    struct timespec main_start, main_end;
+    struct timespec kernel_start, kernel_end;
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
+    if (timing_path && timing_path[0] != '\0') {
+        FILE *tmp = fopen(timing_path, "w");
+        if (tmp)
+            timing_file = tmp;
+    }
 
     // Keep track of the start time of the program
     long long program_start_time = get_time();
@@ -11,9 +27,9 @@ int main(int argc, char **argv) {
     // Let the user specify the number of frames to process
     int num_frames = 1;
 
-    if (argc != 4) {
+    if (argc != 4 && argc != 6) {
         fprintf(stderr,
-                "usage: %s <num of frames> <num of threads><input file>",
+                "usage: %s <num of frames> <num of threads> <input file> [-o <output_file>]",
                 argv[0]);
         exit(1);
     }
@@ -21,6 +37,14 @@ int main(int argc, char **argv) {
     if (argc > 1) {
         num_frames = atoi(argv[1]);
         omp_num_threads = atoi(argv[2]);
+        if (argc == 6) {
+            if (strcmp(argv[4], "-o") == 0) {
+                g_output_file = argv[5];
+            } else {
+                fprintf(stderr, "unknown option: %s (expected -o <output_file>)\n", argv[4]);
+                exit(1);
+            }
+        }
     }
     printf("Num of threads: %d\n", omp_num_threads);
     // Open video file
@@ -241,6 +265,20 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Optional: write final detection results (frame 0 centers)
+    if (g_output_file != NULL) {
+        FILE *fout = fopen(g_output_file, "w");
+        if (fout) {
+            fprintf(fout, "Cells detected: %d\n", k_count);
+            for (i = 0; i < k_count; i++) {
+                fprintf(fout, "%.6f %.6f\n", QAX_CENTERS[i], QAY_CENTERS[i]);
+            }
+            fclose(fout);
+        } else {
+            fprintf(stderr, "Failed to open output file: %s\n", g_output_file);
+        }
+    }
+
     // Free memory
     free(V);
     free(ccol);
@@ -280,8 +318,10 @@ int main(int argc, char **argv) {
         printf("\nTracking cells across 1 frame\n");
     long long tracking_start_time = get_time();
     int num_snaxels = 20;
+    clock_gettime(CLOCK_MONOTONIC, &kernel_start);
     ellipsetrack(cell_file, QAX_CENTERS, QAY_CENTERS, k_count, radius,
                  num_snaxels, num_frames);
+    clock_gettime(CLOCK_MONOTONIC, &kernel_end);
     printf("           Total: %.5f seconds\n",
            ((float)(get_time() - tracking_start_time)) /
                (float)(1000 * 1000 * num_frames));
@@ -289,6 +329,19 @@ int main(int argc, char **argv) {
     // Report total program execution time
     printf("\nTotal application run time: %.5f seconds\n",
            ((float)(get_time() - program_start_time)) / (1000 * 1000));
+
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+
+    double kernel_time = (kernel_end.tv_sec - kernel_start.tv_sec) +
+                         (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+    double main_time = (main_end.tv_sec - main_start.tv_sec) +
+                       (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+
+    if (timing_file != stderr)
+        fclose(timing_file);
 
     return 0;
 }

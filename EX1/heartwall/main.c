@@ -108,6 +108,18 @@ int main(int argc, char *argv []){
 	public_struct public;
 	private_struct private[ALL_POINTS];
 
+	struct timespec main_start, main_end;
+	struct timespec kernel_start, kernel_end;
+	clock_gettime(CLOCK_MONOTONIC, &main_start);
+
+	FILE *timing_file = stderr;
+	const char *timing_path = getenv("TIMING_LOG_FILE");
+	if (timing_path && timing_path[0] != '\0') {
+		FILE *tmp = fopen(timing_path, "w");
+		if (tmp)
+			timing_file = tmp;
+	}
+
 	//======================================================================================================================================================
 	// 	FRAMES
 	//======================================================================================================================================================
@@ -526,6 +538,7 @@ int main(int argc, char *argv []){
 	//	KERNEL
 	//======================================================================================================================================================
 
+	clock_gettime(CLOCK_MONOTONIC, &kernel_start);
 	for(public.frame_no=0; public.frame_no<frames_processed; public.frame_no++){
 
 	//====================================================================================================
@@ -642,6 +655,20 @@ int main(int argc, char *argv []){
 		free(private[i].d_tMask);
 		free(private[i].d_mask_conv);
 	}
+
+	clock_gettime(CLOCK_MONOTONIC, &kernel_end);
+	clock_gettime(CLOCK_MONOTONIC, &main_end);
+
+	double kernel_time = (kernel_end.tv_sec - kernel_start.tv_sec) +
+			     (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+	double main_time = (main_end.tv_sec - main_start.tv_sec) +
+			   (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+	fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+	fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+
+	if (timing_file != stderr)
+		fclose(timing_file);
 
 }
 

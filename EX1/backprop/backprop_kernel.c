@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include "backprop.h"
 
@@ -36,7 +37,36 @@ double gettime() {
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char **argv) { setup(argc, argv); }
+int main(int argc, char **argv) {
+    struct timespec main_start, main_end;
+    struct timespec kernel_start, kernel_end;
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
+    if (timing_path && timing_path[0] != '\0') {
+        FILE *tmp = fopen(timing_path, "w");
+        if (tmp)
+            timing_file = tmp;
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &kernel_start);
+    setup(argc, argv);
+    clock_gettime(CLOCK_MONOTONIC, &kernel_end);
+
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+
+    double kernel_time = (kernel_end.tv_sec - kernel_start.tv_sec) +
+                         (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+    double main_time = (main_end.tv_sec - main_start.tv_sec) +
+                       (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+
+    if (timing_file != stderr)
+        fclose(timing_file);
+}
 
 
 void bpnn_train_kernel(BPNN *net, float *eo, float *eh) {

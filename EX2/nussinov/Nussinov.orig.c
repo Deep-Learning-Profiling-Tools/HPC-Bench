@@ -13,7 +13,7 @@ Nussinov.c
 Builds a random sequence of base pairs, runs the Nussinov algorithm.
 Unless FOUR_WAY_MAX_WITH_REDUNDANCY is define'd to true, it uses the more concise version as per the comment at the end of the file.
 
-Programmed by Dave Wonnacott at Haverford College <davew@cs.haverford.edu>, with help from Allison Lake, Ting Zhou, and Tian Jin, based on algorithm by Nussinov, described in Allison Lake's senior thesis.
+Programmed by Dave Wonnacott at Haverford College <davew@cs.haverford.edu>, with help from Allison Lake, Ting Anonymous, and Tian Jin, based on algorithm by Nussinov, described in Allison Lake's senior thesis.
 
 
 compile&run with:

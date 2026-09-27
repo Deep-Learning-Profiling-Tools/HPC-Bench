@@ -17,7 +17,7 @@
 // scales to reflect how changes in heart rate as observed during exercise or
 // stress contribute to calcineurin pathway activation, which ultimately leads
 // to the expression
-// of numerous genes that remodel the heart’s structure. It can be used to
+// of numerous genes that remodel the heartâ€™s structure. It can be used to
 // identify potential therapeutic targets that may be useful for the treatment
 // of heart failure.
 // Biochemical reactions, ion transport and electrical activity in the cell are
@@ -138,10 +138,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 
-#include <omp.h>
 
-#include "define.c"
+#include "define.h"
 #include "ecc.c"
 #include "cam.c"
 #include "fin.c"
@@ -157,6 +157,18 @@
 //====================================================================================================100
 
 int main(int argc, char *argv[]) {
+    static const char *g_output_file = NULL; // optional results output file
+    struct timespec main_start, main_end;
+    struct timespec kernel_start, kernel_end;
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
+    if (timing_path && timing_path[0] != '\0') {
+        FILE *tmp = fopen(timing_path, "w");
+        if (tmp)
+            timing_file = tmp;
+    }
 
     //================================================================================80
     //		VARIABLES
@@ -173,6 +185,7 @@ int main(int argc, char *argv[]) {
     long long time4;
     long long time5;
 
+    master_kernel_time = 0.0;
     time0 = get_time();
 
     //============================================================60
@@ -216,9 +229,9 @@ int main(int argc, char *argv[]) {
     //		CHECK NUMBER OF ARGUMENTS
     //============================================================60
 
-    if (argc != 5) {
+    if (argc != 5 && argc != 7) {
         printf("ERROR: %d is the incorrect number of arguments, the number of "
-               "arguments must be 4\n",
+               "arguments must be 4 (optional: -o <output_file>)\n",
                argc - 1);
         return 0;
     }
@@ -277,7 +290,15 @@ int main(int argc, char *argv[]) {
                    threads);
             return 0;
         }
-        omp_set_num_threads(threads);
+        // optional: -o <output_file>
+        if (argc == 7) {
+            if (strcmp(argv[5], "-o") == 0) {
+                g_output_file = argv[6];
+            } else {
+                printf("ERROR: unknown option %s (expected -o <output_file>)\n", argv[5]);
+                return 0;
+            }
+        }
     }
 
     time1 = get_time();
@@ -327,12 +348,12 @@ int main(int argc, char *argv[]) {
 
     // y
     for (i = 0; i < workload; i++) {
-        read("../../data/myocyte/y.txt", y[i][0], 91, 1, 0);
+        read("../../data_rodinia/myocyte/y.txt", y[i][0], 91, 1, 0);
     }
 
     // params
     for (i = 0; i < workload; i++) {
-        read("../../data/myocyte/params.txt", params[i], 16, 1, 0);
+        read("../../data_rodinia/myocyte/params.txt", params[i], 16, 1, 0);
     }
 
     time3 = get_time();
@@ -341,7 +362,7 @@ int main(int argc, char *argv[]) {
     //	EXECUTION
     //================================================================================80
 
-    if (mode == 0) {
+    clock_gettime(CLOCK_MONOTONIC, &kernel_start);
 
         for (i = 0; i < workload; i++) {
 
@@ -352,18 +373,7 @@ int main(int argc, char *argv[]) {
             // }
         }
 
-    } else {
-
-#pragma omp parallel for private(i, status) shared(y, x, xmax, params, mode)
-        for (i = 0; i < workload; i++) {
-
-            status = solver(y[i], x[i], xmax, params[i], mode);
-
-            // if(status !=0){
-            // printf("STATUS: %d\n", status);
-            // }
-        }
-    }
+    clock_gettime(CLOCK_MONOTONIC, &kernel_end);
 
     // // print results
     // int k;
@@ -378,6 +388,23 @@ int main(int argc, char *argv[]) {
     // }
 
     time4 = get_time();
+
+    //================================================================================80
+    // 	WRITE RESULTS (optional)
+    //================================================================================80
+    if (g_output_file != NULL) {
+        FILE *fout = fopen(g_output_file, "w");
+        if (fout) {
+            int k;
+            // write final state vector of the first workload instance at time xmax
+            for (k = 0; k < EQUATIONS; k++) {
+                fprintf(fout, "%.10f\n", y[0][xmax][k]);
+            }
+            fclose(fout);
+        } else {
+            fprintf(stderr, "Failed to open output file: %s\n", g_output_file);
+        }
+    }
 
     //================================================================================80
     //	DEALLOCATION
@@ -427,6 +454,22 @@ int main(int argc, char *argv[]) {
            (float)(time5 - time4) / (float)(time5 - time0) * 100);
     printf("Total time:\n");
     printf("%.12f s\n", (float)(time5 - time0) / 1000000);
+
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+
+    double kernel_time = master_kernel_time;
+    if (kernel_time == 0.0) {
+        kernel_time = (kernel_end.tv_sec - kernel_start.tv_sec) +
+                      (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+    }
+    double main_time = (main_end.tv_sec - main_start.tv_sec) +
+                       (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+
+    if (timing_file != stderr)
+        fclose(timing_file);
 
     //====================================================================================================100
     //	END OF FILE

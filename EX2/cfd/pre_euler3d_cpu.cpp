@@ -5,7 +5,6 @@
 #include <fstream>
 #include <cmath>
 #include <stdlib.h>
-#include <omp.h>
 
 struct float3 {
     float x, y, z;
@@ -42,7 +41,6 @@ template <typename T> T *alloc(int N) { return new T[N]; }
 template <typename T> void dealloc(T *array) { delete[] array; }
 
 template <typename T> void copy(T *dst, T *src, int N) {
-#pragma omp parallel for default(shared) schedule(static)
     for (int i = 0; i < N; i++) {
         dst[i] = src[i];
     }
@@ -89,7 +87,6 @@ float3 ff_fc_density_energy;
 
 
 void initialize_variables(int nelr, float *variables) {
-#pragma omp parallel for default(shared) schedule(static)
     for (int i = 0; i < nelr; i++) {
         for (int j = 0; j < NVAR; j++)
             variables[i * NVAR + j] = ff_variable[j];
@@ -145,7 +142,6 @@ inline float compute_speed_of_sound(float &density, float &pressure) {
 
 void compute_step_factor(int nelr, float *variables, float *areas,
                          float *step_factors) {
-#pragma omp parallel for default(shared) schedule(static)
     for (int i = 0; i < nelr; i++) {
         float density = variables[NVAR * i + VAR_DENSITY];
 
@@ -174,7 +170,6 @@ void compute_flux_contributions(int nelr, float *variables,
                                 float *fc_momentum_x, float *fc_momentum_y,
                                 float *fc_momentum_z,
                                 float *fc_density_energy) {
-#pragma omp parallel for default(shared) schedule(static)
     for (int i = 0; i < nelr; i++) {
         float density_i = variables[NVAR * i + VAR_DENSITY];
         float3 momentum_i;
@@ -226,8 +221,6 @@ void compute_flux(int nelr, int *elements_surrounding_elements, float *normals,
                   float *fc_momentum_z, float *fc_density_energy,
                   float *fluxes) {
     const float smoothing_coefficient = float(0.2f);
-
-#pragma omp parallel for default(shared) schedule(static)
     for (int i = 0; i < nelr; i++) {
         int j, nb;
         float3 normal;
@@ -417,7 +410,6 @@ void compute_flux(int nelr, int *elements_surrounding_elements, float *normals,
 
 void time_step(int j, int nelr, float *old_variables, float *variables,
                float *step_factors, float *fluxes) {
-#pragma omp parallel for default(shared) schedule(static)
     for (int i = 0; i < nelr; i++) {
         float factor = step_factors[i] / float(RK + 1 - j);
 
@@ -448,7 +440,7 @@ int main(int argc, char **argv) {
     }
     const char *data_file_name = argv[1];
 
-    int block_length = omp_get_max_threads();
+    int block_length = 1;
 
     // set far field conditions
     {
@@ -555,7 +547,7 @@ int main(int argc, char **argv) {
 
     // these need to be computed the first time in order to compute time step
     std::cout << "Starting..." << std::endl;
-    double start = omp_get_wtime();
+    double start = 0;
 
     // Begin iterations
     for (int i = 0; i < iterations; i++) {
@@ -575,7 +567,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    double end = omp_get_wtime();
+    double end = 0;
     std::cout << (end - start) / iterations << " seconds per iteration"
               << std::endl;
 

@@ -65,6 +65,7 @@
 #include <sys/time.h> // (in directory known to compiler)			needed by gettimeofday
 #include <math.h>     // (in directory known to compiler)			needed by log, pow
 #include <string.h>   // (in directory known to compiler)			needed by memset
+#include <time.h>
 
 //======================================================================================================================================================150
 //	COMMON
@@ -87,8 +88,8 @@
 //	KERNEL HEADERS
 //======================================================================================================================================================150
 
-#include "./kernel/kernel_cpu.h"   // (in directory provided here)
-#include "./kernel/kernel_cpu_2.h" // (in directory provided here)
+#include "./kernel_cpu.h"   // (in directory provided here)
+#include "./kernel_cpu_2.h" // (in directory provided here)
 
 //======================================================================================================================================================150
 //	HEADER
@@ -1653,6 +1654,18 @@ int main(int argc, char **argv) {
     char *output = "output.txt";
     FILE *pFile;
 
+    struct timespec main_start, main_end;
+    struct timespec kernel_start, kernel_end;
+    double kernel_time = 0.0;
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
+    if (timing_path && timing_path[0] != '\0') {
+        FILE *tmp = fopen(timing_path, "w");
+        if (tmp)
+            timing_file = tmp;
+    }
 
     // go through arguments
     for (cur_arg = 1; cur_arg < argc; cur_arg++) {
@@ -1680,11 +1693,20 @@ int main(int argc, char **argv) {
                 printf("ERROR: Missing value to command parameter\n");
                 return -1;
             }
+        } else if (strcmp(argv[cur_arg], "-o") == 0) {
+            // output file path
+            if (argc >= cur_arg + 1) {
+                output = argv[cur_arg + 1];
+                cur_arg = cur_arg + 1;
+            } else {
+                printf("ERROR: Missing value to -o parameter\n");
+                return -1;
+            }
         }
     }
     // Print configuration
     if ((input_file == NULL) || (command_file == NULL))
-        printf("Usage: ./b+tree file input_file command command_list\n");
+        printf("Usage: ./b+tree file input_file command command_list [-o output_file]\n");
 
     // For debug
     printf("Input File: %s \n", input_file);
@@ -1734,7 +1756,7 @@ int main(int argc, char **argv) {
 
     pFile = fopen(output, "w+");
     if (pFile == NULL)
-        fputs("Fail to open %s !\n", output);
+        fprintf(stderr, "Failed to open output file: %s\n", output);
     fprintf(pFile, "******starting******\n");
     fclose(pFile);
 
@@ -1794,7 +1816,6 @@ int main(int argc, char **argv) {
     // get tree statistics
     // ------------------------------------------------------------60
 
-    printf("Transforming data to a GPU suitable structure...\n");
     long mem_used = transform_to_cuda(root, 0);
     maxheight = height(root);
     long rootLoc = (long)knodes - (long)mem;
@@ -1927,11 +1948,13 @@ int main(int argc, char **argv) {
 
             printf("\n ******command: k count=%d \n", count);
 
-            if (count > 65535) {
-                printf("ERROR: Number of requested querries should be 65,535 "
-                       "at most. (limited by # of CUDA blocks)\n");
-                exit(0);
-            }
+            // NOTE: This limit only applies to CUDA/GPU execution
+            // For CPU-only execution (kernel_cpu), this limit does not apply
+            // if (count > 65535) {
+            //     printf("ERROR: Number of requested querries should be 65,535 "
+            //            "at most. (limited by # of CUDA blocks)\n");
+            //     exit(0);
+            // }
 
             // INPUT: records CPU allocation (setting pointer in mem variable)
             record *records = (record *)mem;
@@ -1976,15 +1999,19 @@ int main(int argc, char **argv) {
                 ans[i].value = -1;
             }
 
+            clock_gettime(CLOCK_MONOTONIC, &kernel_start);
             kernel_cpu(records, knodes, knodes_elem,
 
                        order, maxheight, count,
 
                        currKnode, offset, keys, ans);
+            clock_gettime(CLOCK_MONOTONIC, &kernel_end);
+            kernel_time += (kernel_end.tv_sec - kernel_start.tv_sec) +
+                           (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
 
             pFile = fopen(output, "aw+");
             if (pFile == NULL) {
-                fputs("Fail to open %s !\n", output);
+                fprintf(stderr, "Failed to open output file: %s\n", output);
             }
 
             fprintf(pFile, "\n ******command: k count=%d \n", count);
@@ -2111,16 +2138,20 @@ int main(int argc, char **argv) {
                 reclength[i] = 0;
             }
 
+            clock_gettime(CLOCK_MONOTONIC, &kernel_start);
             kernel_cpu_2(knodes, knodes_elem,
 
                          order, maxheight, count,
 
                          currKnode, offset, lastKnode, offset_2, start, end,
                          recstart, reclength);
+            clock_gettime(CLOCK_MONOTONIC, &kernel_end);
+            kernel_time += (kernel_end.tv_sec - kernel_start.tv_sec) +
+                           (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
 
             pFile = fopen(output, "aw+");
             if (pFile == NULL) {
-                fputs("Fail to open %s !\n", output);
+                fprintf(stderr, "Failed to open output file: %s\n", output);
             }
 
             fprintf(pFile, "\n******command: j count=%d, rSize=%d \n", count,
@@ -2171,6 +2202,17 @@ int main(int argc, char **argv) {
     // ------------------------------------------------------------60
 
     free(mem);
+
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+    double main_time = (main_end.tv_sec - main_start.tv_sec) +
+                       (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+
+    if (timing_file != stderr)
+        fclose(timing_file);
+
     return EXIT_SUCCESS;
 }
 

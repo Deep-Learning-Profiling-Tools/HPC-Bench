@@ -84,12 +84,17 @@
 #include <math.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <omp.h>
+#include <sys/time.h>
+#include <time.h>
 #include "getopt.h"
 
 #include "kmeans.h"
 
-extern double wtime(void);
+static double get_time(void) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec + tv.tv_usec * 1e-6;
+}
 
 /*---< usage() >------------------------------------------------------------*/
 void usage(char *argv0) {
@@ -112,6 +117,7 @@ int main(int argc, char **argv) {
     extern int optind;
     int nclusters = 5;
     char *filename = 0;
+    const char *out_file = NULL; // optional results output file
     float *buf;
     float **attributes;
     float **cluster_centres = NULL;
@@ -125,7 +131,19 @@ int main(int argc, char **argv) {
     float threshold = 0.001;
     double timing;
 
-    while ((opt = getopt(argc, argv, "i:k:t:b:n:?")) != EOF) {
+    struct timespec main_start, main_end;
+    struct timespec kernel_start, kernel_end;
+    clock_gettime(CLOCK_MONOTONIC, &main_start);
+
+    FILE *timing_file = stderr;
+    const char *timing_path = getenv("TIMING_LOG_FILE");
+    if (timing_path && timing_path[0] != '\0') {
+        FILE *tmp = fopen(timing_path, "w");
+        if (tmp)
+            timing_file = tmp;
+    }
+
+    while ((opt = getopt(argc, argv, "i:k:t:b:n:o:?")) != EOF) {
         switch (opt) {
         case 'i':
             filename = optarg;
@@ -138,6 +156,12 @@ int main(int argc, char **argv) {
             break;
         case 'k':
             nclusters = atoi(optarg);
+            break;
+        case 'n':
+            /* thread count placeholder */
+            break;
+        case 'o':
+            out_file = optarg;
             break;
         case '?':
             usage(argv[0]);
@@ -220,7 +244,8 @@ int main(int argc, char **argv) {
 
     memcpy(attributes[0], buf, numObjects * numAttributes * sizeof(float));
 
-    timing = omp_get_wtime();
+    timing = get_time();
+    clock_gettime(CLOCK_MONOTONIC, &kernel_start);
     for (i = 0; i < nloops; i++) {
 
         cluster_centres = NULL;
@@ -228,13 +253,30 @@ int main(int argc, char **argv) {
                 attributes, /* [numObjects][numAttributes] */
                 nclusters, threshold, &cluster_centres);
     }
-    timing = omp_get_wtime() - timing;
+    clock_gettime(CLOCK_MONOTONIC, &kernel_end);
+    timing = get_time() - timing;
 
 
     printf("number of Clusters %d\n", nclusters);
     printf("number of Attributes %d\n\n", numAttributes);
 
-    if (getenv("OUTPUT")) {
+    if (out_file != NULL) {
+        FILE *file = fopen(out_file, "w");
+        if (file) {
+            // Cluster Centers Output
+            // The first number is cluster number and the following data is arribute
+            // value
+            for (i = 0; i < nclusters; i++) {
+                fprintf(file, "%d: ", i);
+                for (j = 0; j < numAttributes; j++)
+                    fprintf(file, "%.2f ", cluster_centres[i][j]);
+                fprintf(file, "\n\n");
+            }
+            fclose(file);
+        } else {
+            fprintf(stderr, "Failed to open output file: %s\n", out_file);
+        }
+    } else if (getenv("OUTPUT")) {
         FILE *file = fopen("output.txt", "w+");
         // Cluster Centers Output
         // The first number is cluster number and the following data is arribute
@@ -245,7 +287,6 @@ int main(int argc, char **argv) {
                 fprintf(file, "%.2f ", cluster_centres[i][j]);
             fprintf(file, "\n\n");
         }
-
         fclose(file);
     }
     printf("Time for process: %f\n", timing);
@@ -254,5 +295,18 @@ int main(int argc, char **argv) {
     free(cluster_centres[0]);
     free(cluster_centres);
     free(buf);
+    clock_gettime(CLOCK_MONOTONIC, &main_end);
+
+    double kernel_time = (kernel_end.tv_sec - kernel_start.tv_sec) +
+                         (kernel_end.tv_nsec - kernel_start.tv_nsec) / 1e9;
+    double main_time = (main_end.tv_sec - main_start.tv_sec) +
+                       (main_end.tv_nsec - main_start.tv_nsec) / 1e9;
+
+    fprintf(timing_file, "KERNEL_TIME: %.9f\n", kernel_time);
+    fprintf(timing_file, "TOTAL_TIME: %.9f\n", main_time);
+
+    if (timing_file != stderr)
+        fclose(timing_file);
+
     return (0);
 }

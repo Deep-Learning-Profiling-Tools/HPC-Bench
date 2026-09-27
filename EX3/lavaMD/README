@@ -2,7 +2,7 @@
 //	DESCRIPTION
 //======================================================================================================================================================150
 
-This is the OpenMP version of the code.
+This is the CUDA version of the code.
 
 The code calculates particle potential and relocation due to mutual forces between particles within a large 3D space. This space is 
 divided into cubes, or large boxes, that are allocated to individual cluster nodes. The large box at each node is further divided into 
@@ -32,11 +32,17 @@ on BlueGene/L." In Proceedings of the 2005 Supercomputing Conference (SC 05). Se
 //======================================================================================================================================================150
 
 The code takes the followint parameters:
--cores		(number of CPU cores to be uses for execution)
 -boxes1d		(number of boxes in one dimension, the total number of boxes will be that^3)
 
 The code can be run as follows:
-./lavaMD -cores 4 -boxes1d 10
+./lavaMD -boxes1d 10
+
+******Adjustable work group size*****
+RD_WG_SIZE_0 or RD_WG_SIZE_0_0 
+
+USAGE:
+make clean
+make KERNEL_DIM="-DRD_WG_SIZE_0=128"
 
 ######OUTPUT FOR VALIDATION########
 USAGE:
