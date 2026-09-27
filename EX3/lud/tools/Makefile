@@ -1,12 +1,2 @@
-include ../common.mk
-
-EXE  = gen_input
-
-.PHONY: all
-all: $(EXE)
-
-$(EXE): $(OBJS)
-
-.PHONY: clean
-clean:
-	$(RM) $(EXE)
+gen_input: gen_input.c
+	gcc -o gen_input -O3 gen_input.c -fopenmp

@@ -6,11 +6,6 @@
 #include "misc_math.h"
 #include <math.h>
 #include <stdlib.h>
-#include <omp.h>
-
-// Number of threads for OpenMP to use
-// (Only defined if we want to parallelize using OpenMP)
-#define OPEN
 
 // Defines the region in the video frame containing the blood vessel
 #define TOP 110

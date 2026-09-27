@@ -9,9 +9,19 @@
         // concurrently, code does not work for larger than 110, more speedup
         // can be achieved with larger number and no shared memory used
 
-#define NUMBER_THREADS                                                         \
-    128 // this should be roughly equal to NUMBER_PAR_PER_BOX for best
-        // performance
+//#define NUMBER_THREADS 128								//
+//this should be roughly equal to NUMBER_PAR_PER_BOX for best performance
+// Parameterized work group size
+#ifdef RD_WG_SIZE_0_0
+#define NUMBER_THREADS RD_WG_SIZE_0_0
+#elif defined(RD_WG_SIZE_0)
+#define NUMBER_THREADS RD_WG_SIZE_0
+#elif defined(RD_WG_SIZE)
+#define NUMBER_THREADS RD_WG_SIZE
+#else
+#define NUMBER_THREADS 128
+#endif
+
 
 #define DOT(A, B) ((A.x) * (B.x) + (A.y) * (B.y) + (A.z) * (B.z)) // STABLE
 
@@ -68,7 +78,3 @@ typedef struct dim_str {
 //===============================================================================================================================================================================================================200
 
 int main(int argc, char *argv[]);
-
-//===============================================================================================================================================================================================================200
-//	END
-//===============================================================================================================================================================================================================200

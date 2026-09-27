@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -ue
 
-./leukocyte 5 4 ../../data/leukocyte/testfile.avi
+./leukocyte ../../data/leukocyte/testfile.avi 10
+

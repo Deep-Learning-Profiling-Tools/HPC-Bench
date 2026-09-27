@@ -121,10 +121,6 @@ MAT *ellipsematching(MAT *grad_x, MAT *grad_y) {
     int height = grad_x->m, width = grad_x->n;
     MAT *gicov = m_get(height, width);
 
-// Split the work among multiple threads, if OPEN is defined
-#ifdef OPEN
-#pragma omp parallel for num_threads(omp_num_threads)
-#endif
     // Scan from left to right, top to bottom, computing GICOV values
     for (i = MaxR; i < width - MaxR; i++) {
         double Grad[NPOINTS];
@@ -203,10 +199,6 @@ MAT *dilate_f(MAT *img_in, MAT *strel) {
     // Find the center of the structuring element
     int el_center_i = strel->m / 2, el_center_j = strel->n / 2, i;
 
-// Split the work among multiple threads, if OPEN is defined
-#ifdef OPEN
-#pragma omp parallel for num_threads(omp_num_threads)
-#endif
     // Iterate across the input matrix
     for (i = 0; i < img_in->m; i++) {
         int j, el_i, el_j, x, y;

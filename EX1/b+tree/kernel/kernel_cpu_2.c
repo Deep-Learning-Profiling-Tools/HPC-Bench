@@ -10,8 +10,8 @@
 //	LIBRARIES
 //======================================================================================================================================================150
 
-#include <omp.h>    // (in directory known to compiler)
 #include <stdlib.h> // (in directory known to compiler)
+#include <stdio.h> // (in directory known to compiler)                  needed by printf
 
 //======================================================================================================================================================150
 //	COMMON
@@ -61,9 +61,6 @@ void kernel_cpu_2(knode *knodes, long knodes_elem,
     //	MCPU SETUP
     //======================================================================================================================================================150
 
-    int max_nthreads;
-    max_nthreads = omp_get_max_threads();
-    // printf("max # of threads = %d\n", max_nthreads);
 
     int threadsPerBlock;
     threadsPerBlock = order < 1024 ? order : 1024;
@@ -78,8 +75,7 @@ void kernel_cpu_2(knode *knodes, long knodes_elem,
     int thid;
     int bid;
 
-// process number of querries
-#pragma omp parallel for private(i, thid)
+// process number of queries
     for (bid = 0; bid < count; bid++) {
 
         // process levels of the tree

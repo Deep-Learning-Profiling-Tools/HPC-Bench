@@ -75,7 +75,7 @@ func_ret_t create_matrix_from_random(float **mp, int size) {
     float *l, *u, *m;
     int i, j, k;
 
-    srand(time(NULL));
+    srand(7);
 
     l = (float *)malloc(size * size * sizeof(float));
     if (l == NULL)
@@ -134,7 +134,7 @@ void matrix_multiply(float *inputa, float *inputb, float *output, int size) {
                     inputa[i * size + k] * inputb[k * size + j];
 }
 
-func_ret_t lud_verify(float *m, float *lu, int matrix_dim) {
+func_ret_t lud_verify(float *m, float *lu, int matrix_dim, FILE *output_fp) {
     int i, j, k;
     float *tmp = (float *)malloc(matrix_dim * matrix_dim * sizeof(float));
 
@@ -176,9 +176,12 @@ func_ret_t lud_verify(float *m, float *lu, int matrix_dim) {
 
     for (i = 0; i < matrix_dim; i++) {
         for (j = 0; j < matrix_dim; j++) {
-            if (fabs(m[i * matrix_dim + j] - tmp[i * matrix_dim + j]) > 0.0001)
-                printf("dismatch at (%d, %d): (o)%f (n)%f\n", i, j,
+            if (fabs(m[i * matrix_dim + j] - tmp[i * matrix_dim + j]) > 0.0001) {
+                if (output_fp != NULL) {
+                    fprintf(output_fp, "dismatch at (%d, %d): (o)%f (n)%f\n", i, j,
                        m[i * matrix_dim + j], tmp[i * matrix_dim + j]);
+                }
+            }
         }
     }
     free(tmp);
