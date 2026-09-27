@@ -267,14 +267,7 @@ HPC-Bench/
 
 ## 📝 Citation
 
-```bibtex
-@inproceedings{cui2026hpcbench,
-  title     = {{HPC-Bench}: A Comprehensive Benchmark for High Performance Computing Codes},
-  author    = {Cui, Bowen and Yin, Junyu and Ramesh, Tejas and Lim, Leo and Hernandez, Oscar and Zhou, Keren},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS), Evaluations and Datasets Track},
-  year      = {2026}
-}
-```
+TBD
 
 ## 🤝 License and Attribution
 
