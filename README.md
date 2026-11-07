@@ -8,7 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://huggingface.co/datasets/bcui2/HPC-Bench"><img src="assets/icons/huggingface.svg" height="16" alt=""> Input Data</a> |
+  <a href="https://arxiv.org/abs/2611.02752">📄 Paper</a> |
+  <a href="https://huggingface.co/datasets/bcui2/HPC-Bench"><img src="assets/icons/huggingface.svg" height="16" alt=""> Dataset</a> |
   <a href="docs/REPRODUCING_PAPER.md"><img src="assets/icons/book.svg" height="16" alt=""> Reproducing the Paper</a> |
   <a href="docs/BENCHMARKS.md"><img src="assets/icons/github.svg" height="16" alt=""> Benchmark Catalog</a>
 </p>
@@ -267,7 +268,14 @@ HPC-Bench/
 
 ## 📝 Citation
 
-TBD
+```bibtex
+@article{cui2026hpc,
+  title={HPC-Bench: A Comprehensive Benchmark for High Performance Computing Codes},
+  author={Cui, Bowen and Yin, Junyu and Ramesh, Tejas and Lim, Leo and Hernandez, Oscar and Zhou, Keren},
+  journal={arXiv preprint arXiv:2611.02752},
+  year={2026}
+}
+```
 
 ## 🤝 License and Attribution
 
