@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use HPC-Bench, please cite the paper below."
+title: "HPC-Bench: A Comprehensive Benchmark for High Performance Computing Codes"
+type: software
+license: MIT
+repository-code: "https://github.com/Deep-Learning-Profiling-Tools/HPC-Bench"
+url: "https://huggingface.co/datasets/bcui2/HPC-Bench"
+authors:
+  - family-names: Cui
+    given-names: Bowen
+  - family-names: Yin
+    given-names: Junyu
+  - family-names: Ramesh
+    given-names: Tejas
+  - family-names: Lim
+    given-names: Leo
+  - family-names: Hernandez
+    given-names: Oscar
+  - family-names: Zhou
+    given-names: Keren
+preferred-citation:
+  type: article
+  title: "HPC-Bench: A Comprehensive Benchmark for High Performance Computing Codes"
+  journal: "arXiv preprint arXiv:2611.02752"
+  year: 2026
+  url: "https://arxiv.org/abs/2611.02752"
+  identifiers:
+    - type: other
+      value: "arXiv:2611.02752"
+      description: "arXiv identifier"
+  authors:
+    - family-names: Cui
+      given-names: Bowen
+    - family-names: Yin
+      given-names: Junyu
+    - family-names: Ramesh
+      given-names: Tejas
+    - family-names: Lim
+      given-names: Leo
+    - family-names: Hernandez
+      given-names: Oscar
+    - family-names: Zhou
+      given-names: Keren
