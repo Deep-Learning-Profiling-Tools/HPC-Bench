@@ -6,6 +6,13 @@ from typing import Any, Dict
 
 BenchmarkMeta = Dict[str, Dict[str, Any]]
 
+# "threshold" is the absolute tolerance for comparing a candidate's output with the reference output:
+#   0     -> the outputs must match exactly;
+#   "N/A" -> not applicable: correctness is not decided by an output tolerance (MachSuite programs check
+#            themselves against check.data; the PARSEC checker compares the reported Improvement value).
+# The PolyBench checker reads this field. The other suite checkers apply the atol/rtol defined per
+# benchmark in scripts/checkers/output_specs.py.
+
 BENCHMARK_POLYBENCH: BenchmarkMeta = {
     "correlation": {"target_file": "correlation.c", "threshold": 0.002, "start_line": 67, "end_line": 126},
     "covariance": {"target_file": "covariance.c", "threshold": 0.002, "start_line": 65, "end_line": 98},
@@ -70,53 +77,53 @@ BENCHMARK_CODEE: BenchmarkMeta = {
 }
 
 BENCHMARK_PARBOIL: BenchmarkMeta = {
-    "sad": {"target_file": "sad_cpu.c", "threshold": "TBD", "start_line": 1, "end_line": 202},
-    "cutcp": {"target_file": "cutcpu.c", "threshold": "TBD", "start_line": 1, "end_line": 221},
+    "sad": {"target_file": "sad_cpu.c", "threshold": 0, "start_line": 1, "end_line": 202},
+    "cutcp": {"target_file": "cutcpu.c", "threshold": 0, "start_line": 1, "end_line": 221},
     "histo": {"target_file": "main.c", "threshold": 0.001, "start_line": 1, "end_line": 142},
-    "lbm": {"target_file": "lbm.c", "threshold": "TBD", "start_line": 1, "end_line": 626},
-    "mri-gridding": {"target_file": "CPU_kernels.c", "threshold": "TBD", "start_line": 1, "end_line": 197},
-    "mri-q": {"target_file": "computeQ.cc", "threshold": "TBD", "start_line": 1, "end_line": 65},
+    "lbm": {"target_file": "lbm.c", "threshold": 0, "start_line": 1, "end_line": 626},
+    "mri-gridding": {"target_file": "CPU_kernels.c", "threshold": 0, "start_line": 1, "end_line": 197},
+    "mri-q": {"target_file": "computeQ.cc", "threshold": 0, "start_line": 1, "end_line": 65},
     "sgemm": {"target_file": "sgemm_kernel.cc", "threshold": 0.001, "start_line": 1, "end_line": 24},
-    "spmv": {"target_file": "main.c", "threshold": "TBD", "start_line": 1, "end_line": 134},
-    "stencil": {"target_file": "kernels.c", "threshold": "TBD", "start_line": 1, "end_line": 25},
+    "spmv": {"target_file": "main.c", "threshold": 0, "start_line": 1, "end_line": 134},
+    "stencil": {"target_file": "kernels.c", "threshold": 0, "start_line": 1, "end_line": 25},
     "tpacf": {"target_file": "model_compute_cpu.c", "threshold": 0, "start_line": 1, "end_line": 60},
 }
 
 BENCHMARK_MIBENCH: BenchmarkMeta = {
-    "basicmath-mibench": {"target_file": "cubic.c", "threshold": "TBD", "start_line": 10, "end_line": 47},
-    "bitcount-mibench": {"target_file": "bitcnts.c", "threshold": "TBD", "start_line": 120, "end_line": 134},
+    "basicmath-mibench": {"target_file": "cubic.c", "threshold": 1e-6, "start_line": 10, "end_line": 47},
+    "bitcount-mibench": {"target_file": "bitcnts.c", "threshold": 0, "start_line": 120, "end_line": 134},
     "qsort-mibench": {"target_file": "qsort_large.c", "threshold": 0, "start_line": 1, "end_line": 114},
-    "susan-s-mibench": {"target_file": "susan.c", "threshold": "TBD", "start_line": 391, "end_line": 529},
-    "susan-e-mibench": {"target_file": "susan.c", "threshold": "TBD", "start_line": 783, "end_line": 1023},
-    "susan-c-mibench": {"target_file": "susan.c", "threshold": "TBD", "start_line": 1184, "end_line": 1469},
+    "susan-s-mibench": {"target_file": "susan.c", "threshold": 0, "start_line": 391, "end_line": 529},
+    "susan-e-mibench": {"target_file": "susan.c", "threshold": 0, "start_line": 783, "end_line": 1023},
+    "susan-c-mibench": {"target_file": "susan.c", "threshold": 0, "start_line": 1184, "end_line": 1469},
     "dijkstra-mibench": {"target_file": "dijkstra_parameterized.c", "threshold": 0, "start_line": 103, "end_line": 153},
-    "patricia-mibench": {"target_file": "patricia.c", "threshold": "TBD", "start_line": 63, "end_line": 175},
-    "stringsearch-mibench": {"target_file": "pbmsrch_parameterized.c", "threshold": "TBD", "start_line": 26, "end_line": 57},
+    "patricia-mibench": {"target_file": "patricia.c", "threshold": 0, "start_line": 63, "end_line": 175},
+    "stringsearch-mibench": {"target_file": "pbmsrch_parameterized.c", "threshold": 0, "start_line": 26, "end_line": 57},
 }
 
 BENCHMARK_PARSEC: BenchmarkMeta = {
-    "canneal-parsec": {"target_file": "annealer_thread.cpp", "threshold": "TBD", "start_line": 19, "end_line": 64},
+    "canneal-parsec": {"target_file": "annealer_thread.cpp", "threshold": "N/A", "start_line": 19, "end_line": 64},
 }
 
 BENCHMARK_MACHSUITE: BenchmarkMeta = {
-    "aes": {"target_file": "aes.c", "threshold": "None", "start_line": 179, "end_line": 212},
-    "bfs-bulk-mach": {"target_file": "bfs.c", "threshold": "None", "start_line": 1, "end_line": 49},
-    "bfs-queue-mach": {"target_file": "bfs.c", "threshold": "None", "start_line": 1, "end_line": 56},
-    "fft-strided-mach": {"target_file": "fft.c", "threshold": "None", "start_line": 1, "end_line": 44},
-    "fft-transpose-mach": {"target_file": "fft.c", "threshold": "None", "start_line": 114, "end_line": 415},
-    "gemm-blocked-mach": {"target_file": "gemm.c", "threshold": "None", "start_line": 1, "end_line": 36},
-    "gemm-ncubed-mach": {"target_file": "gemm.c", "threshold": "None", "start_line": 1, "end_line": 33},
-    "kmp-mach": {"target_file": "kmp.c", "threshold": "None", "start_line": 1, "end_line": 52},
-    "md-grid-mach": {"target_file": "md.c", "threshold": "None", "start_line": 1, "end_line": 70},
-    "md-knn-mach": {"target_file": "md.c", "threshold": "None", "start_line": 1, "end_line": 64},
-    "nw-mach": {"target_file": "nw.c", "threshold": "None", "start_line": 1, "end_line": 104},
-    "sort-merge-mach": {"target_file": "sort.c", "threshold": "None", "start_line": 1, "end_line": 64},
-    "sort-radix-mach": {"target_file": "sort.c", "threshold": "None", "start_line": 77, "end_line": 110},
-    "spmv-crs-mach": {"target_file": "spmv.c", "threshold": "None", "start_line": 1, "end_line": 30},
-    "spmv-ellpack-mach": {"target_file": "spmv.c", "threshold": "None", "start_line": 1, "end_line": 29},
-    "stencil-2d-mach": {"target_file": "stencil.c", "threshold": "None", "start_line": 1, "end_line": 32},
-    "stencil-3d-mach": {"target_file": "stencil.c", "threshold": "None", "start_line": 1, "end_line": 58},
-    "viterbi-mach": {"target_file": "viterbi.c", "threshold": "None", "start_line": 1, "end_line": 76},
+    "aes": {"target_file": "aes.c", "threshold": "N/A", "start_line": 179, "end_line": 212},
+    "bfs-bulk-mach": {"target_file": "bfs.c", "threshold": "N/A", "start_line": 1, "end_line": 49},
+    "bfs-queue-mach": {"target_file": "bfs.c", "threshold": "N/A", "start_line": 1, "end_line": 56},
+    "fft-strided-mach": {"target_file": "fft.c", "threshold": "N/A", "start_line": 1, "end_line": 44},
+    "fft-transpose-mach": {"target_file": "fft.c", "threshold": "N/A", "start_line": 114, "end_line": 415},
+    "gemm-blocked-mach": {"target_file": "gemm.c", "threshold": "N/A", "start_line": 1, "end_line": 36},
+    "gemm-ncubed-mach": {"target_file": "gemm.c", "threshold": "N/A", "start_line": 1, "end_line": 33},
+    "kmp-mach": {"target_file": "kmp.c", "threshold": "N/A", "start_line": 1, "end_line": 52},
+    "md-grid-mach": {"target_file": "md.c", "threshold": "N/A", "start_line": 1, "end_line": 70},
+    "md-knn-mach": {"target_file": "md.c", "threshold": "N/A", "start_line": 1, "end_line": 64},
+    "nw-mach": {"target_file": "nw.c", "threshold": "N/A", "start_line": 1, "end_line": 104},
+    "sort-merge-mach": {"target_file": "sort.c", "threshold": "N/A", "start_line": 1, "end_line": 64},
+    "sort-radix-mach": {"target_file": "sort.c", "threshold": "N/A", "start_line": 77, "end_line": 110},
+    "spmv-crs-mach": {"target_file": "spmv.c", "threshold": "N/A", "start_line": 1, "end_line": 30},
+    "spmv-ellpack-mach": {"target_file": "spmv.c", "threshold": "N/A", "start_line": 1, "end_line": 29},
+    "stencil-2d-mach": {"target_file": "stencil.c", "threshold": "N/A", "start_line": 1, "end_line": 32},
+    "stencil-3d-mach": {"target_file": "stencil.c", "threshold": "N/A", "start_line": 1, "end_line": 58},
+    "viterbi-mach": {"target_file": "viterbi.c", "threshold": "N/A", "start_line": 1, "end_line": 76},
 }
 
 __all__ = [
